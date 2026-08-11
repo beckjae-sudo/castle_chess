@@ -1,11 +1,12 @@
 """Player model for Castle Chess."""
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 import re
 
 
 CHESS_ID_PATTERN = re.compile(r"^[A-Z]{2}\d{5}$")
+BIRTHDAY_FORMAT = "%d-%m-%Y"
 
 
 @dataclass
@@ -40,8 +41,12 @@ class Player:
             "name": self.name,
             "email": self.email,
             "chess_id": self.chess_id,
-            "birthdate": self.birthdate.isoformat(),
+            "birthday": self.birthdate.strftime(BIRTHDAY_FORMAT),
         }
+
+    def serialize(self) -> dict:
+        """Serialize the player using the starter project's interface."""
+        return self.to_dict()
 
     @classmethod
     def from_dict(cls, data: dict) -> "Player":
@@ -50,5 +55,7 @@ class Player:
             name=data["name"],
             email=data["email"],
             chess_id=data["chess_id"],
-            birthdate=date.fromisoformat(data["birthdate"]),
+            birthdate=datetime.strptime(
+                data["birthday"], BIRTHDAY_FORMAT
+            ).date(),
         )
