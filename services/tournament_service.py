@@ -42,7 +42,10 @@ class TournamentService:
 
         tournament.add_round(round_)
         return round_
-
+    @staticmethod
+    def save(tournament, manager):
+        """Save the current tournament state"""
+        manager.save_tournament(tournament)
     @staticmethod
     def record_result(
         tournament: Tournament,
