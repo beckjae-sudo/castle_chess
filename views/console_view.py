@@ -60,7 +60,8 @@ class ConsoleView:
         print("1. List clubs")
         print("2. List players")
         print("3. Create tournament")
-        print("4. Exit")
+        print("4. Generate tournament report")
+        print("5. Exit")
 
     @staticmethod
     def get_choice():

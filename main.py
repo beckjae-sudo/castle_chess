@@ -6,6 +6,8 @@ from models.club_manager import ClubManager
 from models.tournament_manager import TournamentManager
 from services.tournament_service import TournamentService
 from views.console_view import ConsoleView
+from services.report_service import ReportService
+
 
 
 class CastleChessApp:
@@ -34,6 +36,9 @@ class CastleChessApp:
                 self.create_tournament()
 
             elif choice == "4":
+                self.generate_report()
+
+            elif choice == "5":
                 self.view.show_message("Goodbye!")
                 break
 
@@ -217,6 +222,33 @@ class CastleChessApp:
 
         except ValueError as error:
             self.view.show_message(str(error))
+
+    def generate_report(self):
+        """Display a report for a saved tournament."""
+        if not self.tournament_manager.tournaments:
+            self.view.show_message("No tournaments found.")
+            return
+
+        print("\nAvailable tournaments:")
+
+        for index, tournament in enumerate(
+            self.tournament_manager.tournaments,
+            start=1,
+        ):
+            print(f"{index}. {tournament.name}")
+
+        choice = self.view.get_input("Select tournament: ")
+
+        try:
+            tournament = self.tournament_manager.tournaments[
+                int(choice) - 1
+            ]
+        except (ValueError, IndexError):
+            self.view.show_message("Invalid tournament selection.")
+            return
+
+        print()
+        print(ReportService.generate(tournament))
 
 
 if __name__ == "__main__":
