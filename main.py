@@ -164,31 +164,34 @@ class CastleChessApp:
                         f"{match.white_player_id} vs "
                         f"{match.black_player_id}"
                     )
-                    print("1. White wins")
-                    print("2. Black wins")
-                    print("3. Draw")
 
-                    result = self.view.get_input("Result: ")
+                    while True:
+                        print("1. White wins")
+                        print("2. Black wins")
+                        print("3. Draw")
 
-                    result_map = {
-                        "1": "white_win",
-                        "2": "black_win",
-                        "3": "draw",
-                    }
+                        result = self.view.get_input("Result: ")
 
-                    if result not in result_map:
-                        self.view.show_message(
-                            "Invalid result. Try again."
+                        result_map = {
+                            "1": "white_win",
+                            "2": "black_win",
+                            "3": "draw",
+                        }
+
+                        if result not in result_map:
+                            self.view.show_message(
+                                "Invalid result. Please enter 1, 2, or 3."
+                            )
+                            continue
+
+                        TournamentService.record_result(
+                            tournament,
+                            index - 1,
+                            result_map[result]
                         )
-                        continue
 
-                    TournamentService.record_result(
-                        tournament,
-                        index - 1,
-                        result_map[result],
-                    )
-
-                    self.tournament_manager.save(tournament)
+                        self.tournament_manager.save(tournament)
+                        break
 
                 self.view.show_standings(tournament)
 
@@ -219,4 +222,3 @@ class CastleChessApp:
 if __name__ == "__main__":
     app = CastleChessApp()
     app.run()
-

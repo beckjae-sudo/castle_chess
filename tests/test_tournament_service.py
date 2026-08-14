@@ -7,7 +7,6 @@ import pytest
 from models.tournament import Tournament
 from services.tournament_service import TournamentService
 
-
 PLAYER_IDS = [
     "AA11111",
     "BB22222",
@@ -141,4 +140,120 @@ def test_invalid_match_result_is_rejected():
             0,
             "not_a_real_result",
         )
-        
+
+
+def test_repeat_opponents_are_avoided_when_possible():
+    tournament = make_tournament()
+
+    round_1 = TournamentService.start_first_round(tournament)
+
+    for index in range(len(round_1.matches)):
+        TournamentService.record_result(
+            tournament,
+            index,
+            "draw",
+        )
+
+    round_2 = TournamentService.generate_next_round(tournament)
+
+    round_1_pairs = {
+        frozenset(
+            [match.white_player_id, match.black_player_id]
+        )
+        for match in round_1.matches
+    }
+
+    round_2_pairs = {
+        frozenset(
+            [match.white_player_id, match.black_player_id]
+        )
+        for match in round_2.matches
+    }
+
+    assert round_1_pairs.isdisjoint(round_2_pairs)
+
+
+def test_tournament_completes_after_required_rounds():
+    tournament = make_tournament(number_of_rounds=2)
+
+    round_1 = TournamentService.start_first_round(tournament)
+
+    for index in range(len(round_1.matches)):
+        TournamentService.record_result(
+            tournament,
+            index,
+            "draw",
+        )
+
+    round_2 = TournamentService.generate_next_round(tournament)
+
+    for index in range(len(round_2.matches)):
+        TournamentService.record_result(
+            tournament,
+            index,
+            "draw",
+        )
+
+    assert tournament.is_complete
+
+
+def test_completed_tournament_cannot_generate_another_round():
+    tournament = make_tournament(number_of_rounds=1)
+
+    round_1 = TournamentService.start_first_round(tournament)
+
+    for index in range(len(round_1.matches)):
+        TournamentService.record_result(
+            tournament,
+            index,
+            "draw",
+        )
+
+    assert tournament.is_complete
+
+    with pytest.raises(ValueError):
+        TournamentService.generate_next_round(tournament)
+
+
+def test_next_round_pairs_players_by_score():
+    tournament = make_tournament()
+
+    round_1 = TournamentService.start_first_round(tournament)
+
+    for index, match in enumerate(round_1.matches):
+        if index % 2 == 0:
+            TournamentService.record_result(
+                tournament,
+                index,
+                "white_win",
+            )
+        else:
+            TournamentService.record_result(
+                tournament,
+                index,
+                "black_win",
+            )
+
+    standings = tournament.standings()
+
+    top_players = {
+        chess_id
+        for chess_id, points in standings
+        if points == 1.0
+    }
+
+    bottom_players = {
+        chess_id
+        for chess_id, points in standings
+        if points == 0.0
+    }
+
+    round_2 = TournamentService.generate_next_round(tournament)
+
+    for match in round_2.matches:
+        players = {
+            match.white_player_id,
+            match.black_player_id,
+        }
+
+        assert players <= top_players or players <= bottom_players

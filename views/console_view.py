@@ -73,4 +73,3 @@ class ConsoleView:
     @staticmethod
     def get_input(prompt):
         return input(prompt).strip()
-    

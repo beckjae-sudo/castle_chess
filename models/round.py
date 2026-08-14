@@ -67,4 +67,3 @@ class Round:
                 for match_data in data.get("matches", [])
             ],
         )
-    
