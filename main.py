@@ -9,7 +9,6 @@ from views.console_view import ConsoleView
 from services.report_service import ReportService
 
 
-
 class CastleChessApp:
     """Coordinate the Castle Chess application."""
 
