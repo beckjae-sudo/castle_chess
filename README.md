@@ -1,12 +1,17 @@
 # Castle Chess
 
-Chess tournament management application.
+Castle Chess is a console-based chess tournament management application built in Python.
+
+The application works offline and uses JSON files to persist club, player, and tournament data.
+
+## Requirements
+
+- Python 3.13+
+- pip
 
 ## Setup
 
-Create and activate a virtual environment.
-
-Install dependencies:
+Create a virtual environment:
 
 ```bash
-python -m pip install -r requirements.txt
+python -m venv .venv
