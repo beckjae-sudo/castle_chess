@@ -1,12 +1,12 @@
 """Castle Chess application entry point."""
 
-from datetime import date
+from datetime import date, datetime
 
 from models.club_manager import ClubManager
 from models.tournament_manager import TournamentManager
+from services.report_service import ReportService
 from services.tournament_service import TournamentService
 from views.console_view import ConsoleView
-from services.report_service import ReportService
 
 
 class CastleChessApp:
@@ -32,12 +32,15 @@ class CastleChessApp:
                 self.list_players()
 
             elif choice == "3":
-                self.create_tournament()
+                self.add_player()
 
             elif choice == "4":
-                self.generate_report()
+                self.create_tournament()
 
             elif choice == "5":
+                self.generate_report()
+
+            elif choice == "6":
                 self.view.show_message("Goodbye!")
                 break
 
@@ -51,6 +54,14 @@ class CastleChessApp:
             return
 
         self.view.show_clubs(self.club_manager.clubs)
+
+    def get_players_by_id(self):
+        """Return all club players indexed by Chess ID."""
+        return {
+            player.chess_id: player
+            for club in self.club_manager.clubs
+            for player in club.players
+        }
 
     def list_players(self):
         """Display players from a selected club."""
@@ -78,6 +89,50 @@ class CastleChessApp:
             self.view.show_message("Invalid club selection.")
             return None
 
+    def add_player(self):
+        """Create a new player and add them to a selected club."""
+        club = self.select_club()
+
+        if club is None:
+            return
+
+        self.view.show_message("Add New Player")
+
+        name = self.view.get_input("Player name: ")
+        email = self.view.get_input("Email address: ")
+        chess_id = self.view.get_input("Chess ID: ").upper()
+        birthday_text = self.view.get_input(
+            "Birthdate (MM-DD-YYYY): "
+        )
+
+        try:
+            birthday = datetime.strptime(
+                birthday_text,
+                "%m-%d-%Y",
+            ).date()
+
+            if any(
+                player.chess_id == chess_id
+                for player in club.players
+            ):
+                raise ValueError(
+                    "A player with that Chess ID already exists."
+                )
+
+            player = club.create_player(
+                name=name,
+                email=email,
+                chess_id=chess_id,
+                birthdate=birthday,
+            )
+
+            self.view.show_message(
+                f"Player {player.name} was added successfully."
+            )
+
+        except ValueError as error:
+            self.view.show_message(str(error))
+
     def create_tournament(self):
         """Create and run a new tournament."""
         self.view.show_message("Create Tournament")
@@ -90,12 +145,9 @@ class CastleChessApp:
                 self.view.get_input("Number of rounds: ")
             )
         except ValueError:
-            self.view.show_message("Number of rounds must be a number.")
-            return
-
-        club = self.select_club()
-
-        if club is None:
+            self.view.show_message(
+                "Number of rounds must be a number."
+            )
             return
 
         tournament = self.tournament_manager.create(
@@ -106,47 +158,131 @@ class CastleChessApp:
             number_of_rounds=number_of_rounds,
         )
 
-        self.view.show_players(club.players)
+        self.register_players(tournament)
 
-        player_ids = self.view.get_input(
-            "\nEnter player IDs separated by commas: "
-        )
+        if len(tournament.registered_player_ids) < 2:
+            self.view.show_message(
+                "At least two players must be registered."
+            )
+            return
 
-        selected_ids = [
-            chess_id.strip().upper()
-            for chess_id in player_ids.split(",")
-            if chess_id.strip()
-        ]
-
-        try:
-            for chess_id in selected_ids:
-                if not any(
-                    player.chess_id == chess_id
-                    for player in club.players
-                ):
-                    raise ValueError(
-                        f"Player {chess_id} does not belong to this club."
-                    )
-
-                tournament.register_player(chess_id)
-
-            if len(tournament.registered_player_ids) < 2:
-                raise ValueError(
-                    "At least two players must be registered."
-                )
-
-            if len(tournament.registered_player_ids) % 2 != 0:
-                raise ValueError(
-                    "An even number of players is required."
-                )
-
-        except ValueError as error:
-            self.view.show_message(str(error))
+        if len(tournament.registered_player_ids) % 2 != 0:
+            self.view.show_message(
+                "An even number of players is required."
+            )
             return
 
         self.tournament_manager.save(tournament)
-
         self.run_tournament(tournament)
+
+    def register_players(self, tournament):
+        """Allow players to be searched and registered."""
+        while True:
+            available_players = [
+                player
+                for club in self.club_manager.clubs
+                for player in club.players
+                if player.chess_id
+                not in tournament.registered_player_ids
+            ]
+
+            print(
+                "\nRegistered players: "
+                f"{len(tournament.registered_player_ids)}"
+            )
+
+            print("1. List available players")
+            print("2. Search by Chess ID")
+            print("3. Search by player name")
+            print("4. Finish registration")
+            print("5. Add a new player")
+
+            choice = self.view.get_input("Choose an option: ")
+
+            if choice == "1":
+                self.view.show_players(available_players)
+
+            elif choice == "2":
+                chess_id = self.view.get_input(
+                    "Enter Chess ID: "
+                ).upper()
+
+                matches = [
+                    player
+                    for player in available_players
+                    if player.chess_id == chess_id
+                ]
+
+                self.select_player_for_tournament(
+                    tournament,
+                    matches,
+                )
+
+            elif choice == "3":
+                name = self.view.get_input(
+                    "Enter part of the player's name: "
+                ).lower()
+
+                matches = [
+                    player
+                    for player in available_players
+                    if name in player.name.lower()
+                ]
+
+                self.select_player_for_tournament(
+                    tournament,
+                    matches,
+                )
+
+            elif choice == "4":
+                return
+
+            elif choice == "5":
+                self.add_player()
+
+            else:
+                self.view.show_message("Invalid choice.")
+
+    def select_player_for_tournament(
+        self,
+        tournament,
+        players,
+    ):
+        """Register one player from a list of search results."""
+        if not players:
+            self.view.show_message(
+                "No matching players found."
+            )
+            return
+
+        self.view.show_players(players)
+
+        choice = self.view.get_input(
+            "Select player number, or press Enter to cancel: "
+        )
+
+        if not choice:
+            return
+
+        try:
+            player = players[int(choice) - 1]
+        except (ValueError, IndexError):
+            self.view.show_message(
+                "Invalid player selection."
+            )
+            return
+
+        try:
+            tournament.register_player(player.chess_id)
+
+            self.view.show_message(
+                f"{player.name} registered successfully."
+            )
+
+            self.tournament_manager.save(tournament)
+
+        except ValueError as error:
+            self.view.show_message(str(error))
 
     def run_tournament(self, tournament):
         """Run rounds until the tournament is complete."""
@@ -156,17 +292,24 @@ class CastleChessApp:
 
             while True:
                 current_round = tournament.rounds[-1]
+                players_by_id = self.get_players_by_id()
 
-                self.view.show_pairings(current_round)
+                self.view.show_pairings(
+                    current_round,
+                    players_by_id,
+                )
 
                 for index, match in enumerate(
                     current_round.matches,
                     start=1,
                 ):
+                    white = players_by_id[match.white_player_id]
+                    black = players_by_id[match.black_player_id]
+
                     print(
                         f"\nMatch {index}: "
-                        f"{match.white_player_id} vs "
-                        f"{match.black_player_id}"
+                        f"{white.name} ({white.chess_id}) vs "
+                        f"{black.name} ({black.chess_id})"
                     )
 
                     while True:
@@ -191,13 +334,16 @@ class CastleChessApp:
                         TournamentService.record_result(
                             tournament,
                             index - 1,
-                            result_map[result]
+                            result_map[result],
                         )
 
                         self.tournament_manager.save(tournament)
                         break
 
-                self.view.show_standings(tournament)
+                self.view.show_standings(
+                    tournament,
+                    players_by_id,
+                )
 
                 if tournament.is_complete:
                     self.view.show_message(
@@ -246,8 +392,14 @@ class CastleChessApp:
             self.view.show_message("Invalid tournament selection.")
             return
 
-        print()
-        print(ReportService.generate(tournament))
+        players_by_id = self.get_players_by_id()
+
+        print(
+            ReportService.generate(
+                tournament,
+                players_by_id,
+            )
+        )
 
 
 if __name__ == "__main__":
