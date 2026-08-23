@@ -19,31 +19,37 @@ class ConsoleView:
 
     @staticmethod
     def show_players(players):
+        """Display players with selection numbers."""
         print("\nPlayers:")
 
-        for player in players:
+        for index, player in enumerate(players, start=1):
             print(
-                f"{player.chess_id:<8} "
-                f"{player.name:<25} "
-                f"{player.email}"
-            )
+            f"{index}. "
+            f"{player.name} ({player.chess_id}) - "
+            f"{player.email} - "
+            f"{player.birthdate}"
+        )
 
     @staticmethod
-    def show_pairings(round_):
+    def show_pairings(round_, players_by_id):
+        """Display round pairings using player names and Chess IDs."""
         print(f"\n--- Round {round_.number} ---")
 
         for index, match in enumerate(round_.matches, start=1):
+            white = players_by_id[match.white_player_id]
+            black = players_by_id[match.black_player_id]
             result = match.result or "Not played"
 
             print(
                 f"{index}. "
-                f"{match.white_player_id} vs "
-                f"{match.black_player_id} "
+                f"{white.name} ({white.chess_id}) vs "
+                f"{black.name} ({black.chess_id}) "
                 f"[{result}]"
             )
 
     @staticmethod
-    def show_standings(tournament):
+    def show_standings(tournament, players_by_id):
+        """Display standings using player names and Chess IDs."""
         print("\n--- Standings ---")
 
         standings = tournament.standings()
@@ -52,16 +58,23 @@ class ConsoleView:
             standings,
             start=1,
         ):
-            print(f"{position:>2}. {chess_id:<8} {points:.1f} points")
+            player = players_by_id[chess_id]
+
+            print(
+                f"{position:>2}. "
+                f"{player.name} ({player.chess_id}) "
+                f"{points:.1f} points"
+            )
 
     @staticmethod
     def show_menu():
         print("\nMain Menu")
         print("1. List clubs")
         print("2. List players")
-        print("3. Create tournament")
-        print("4. Generate tournament report")
-        print("5. Exit")
+        print("3. Add player")
+        print("4. Create tournament")
+        print("5. Generate tournament report")
+        print("6. Exit")
 
     @staticmethod
     def get_choice():

@@ -7,7 +7,7 @@ class ReportService:
     """Generate plain-text tournament reports."""
 
     @staticmethod
-    def generate(tournament: Tournament) -> str:
+    def generate(tournament: Tournament, players_by_id: dict) -> str:
         """Return a formatted report for a tournament."""
         lines = [
             "=" * 60,
@@ -26,8 +26,12 @@ class ReportService:
             tournament.standings(),
             start=1,
         ):
+            player = players_by_id[chess_id]
+
             lines.append(
-                f"{position:>2}. {chess_id:<10} {points:.1f} points"
+                f"{position:>2}. "
+                f"{player.name} ({player.chess_id}) "
+                f"{points:.1f} points"
             )
 
         lines.extend(
@@ -42,10 +46,13 @@ class ReportService:
             lines.append(f"Round {round_.number}")
 
             for match in round_.matches:
+                white = players_by_id[match.white_player_id]
+                black = players_by_id[match.black_player_id]
                 result = match.result or "Not played"
+
                 lines.append(
-                    f"  {match.white_player_id} vs "
-                    f"{match.black_player_id} - {result}"
+                    f"  {white.name} ({white.chess_id}) vs "
+                    f"{black.name} ({black.chess_id}) - {result}"
                 )
 
             lines.append("")
